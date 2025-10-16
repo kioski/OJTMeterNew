@@ -18,9 +18,9 @@ variables:
   nodeVersion: '18.x'
   
   # Azure Configuration
-  azureSubscription: 'Azure-Subscription-Connection' # Replace with your service connection name
-  appServiceName: 'ojtmeter-app' # Replace with your App Service name
-  resourceGroupName: 'ojtmeter-rg' # Replace with your resource group name
+  azureSubscription: 'Azure-Subscription-Connection'
+  appServiceName: 'ojtmeter-app-prod'
+  resourceGroupName: 'ojtmeter-rg'
   
   # Application Configuration
   frontendBuildPath: 'frontend/dist'
@@ -29,6 +29,9 @@ variables:
   # Environment Variables (will be set in Azure App Service)
   NODE_ENV: 'production'
   PORT: '8080'
+  
+  # Variable Group
+  - group: 'ojtmeter-prod-variables'
 
 stages:
 - stage: Build
