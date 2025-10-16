@@ -1,0 +1,28 @@
+{
+  "name": "ojtmeter-application",
+  "version": "1.0.0",
+  "description": "OJT Time Tracker and Task Update Application - Measure What Matters, Helping Every Student Grow, One Hour at a Time",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install"
+  },
+  "keywords": [
+    "ojt",
+    "time-tracker",
+    "azure",
+    "react",
+    "nodejs",
+    "cosmos-db"
+  ],
+  "author": "OJTmeter Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

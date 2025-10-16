@@ -1,0 +1,217 @@
+# Azure DevOps Pipeline for OJTmeter Application
+# This pipeline builds and deploys both frontend and backend to Azure App Service
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    exclude:
+      - README.md
+      - docs/*
+      - *.md
+
+variables:
+  # Build Configuration
+  buildConfiguration: 'Release'
+  nodeVersion: '18.x'
+  
+  # Azure Configuration
+  azureSubscription: 'Azure-Subscription-Connection' # Replace with your service connection name
+  appServiceName: 'ojtmeter-app' # Replace with your App Service name
+  resourceGroupName: 'ojtmeter-rg' # Replace with your resource group name
+  
+  # Application Configuration
+  frontendBuildPath: 'frontend/dist'
+  backendBuildPath: 'backend/dist'
+  
+  # Environment Variables (will be set in Azure App Service)
+  NODE_ENV: 'production'
+  PORT: '8080'
+
+stages:
+- stage: Build
+  displayName: 'Build Application'
+  jobs:
+  - job: BuildJob
+    displayName: 'Build Frontend and Backend'
+    pool:
+      vmImage: 'ubuntu-latest'
+    
+    steps:
+    # Install Node.js
+    - task: NodeTool@0
+      displayName: 'Install Node.js'
+      inputs:
+        versionSpec: $(nodeVersion)
+    
+    # Install dependencies
+    - task: Npm@1
+      displayName: 'Install Root Dependencies'
+      inputs:
+        command: 'install'
+        workingDir: '.'
+    
+    - task: Npm@1
+      displayName: 'Install Frontend Dependencies'
+      inputs:
+        command: 'install'
+        workingDir: 'frontend'
+    
+    - task: Npm@1
+      displayName: 'Install Backend Dependencies'
+      inputs:
+        command: 'install'
+        workingDir: 'backend'
+    
+    # Build Frontend
+    - task: Npm@1
+      displayName: 'Build Frontend'
+      inputs:
+        command: 'run'
+        arguments: 'build'
+        workingDir: 'frontend'
+    
+    # Build Backend
+    - task: Npm@1
+      displayName: 'Build Backend'
+      inputs:
+        command: 'run'
+        arguments: 'build'
+        workingDir: 'backend'
+    
+    # Copy Frontend Build to Backend Public Directory
+    - task: CopyFiles@2
+      displayName: 'Copy Frontend to Backend Public'
+      inputs:
+        sourceFolder: '$(frontendBuildPath)'
+        contents: '**'
+        targetFolder: '$(backendBuildPath)/public'
+    
+    # Publish Build Artifacts
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Build Artifacts'
+      inputs:
+        pathToPublish: '$(backendBuildPath)'
+        artifactName: 'ojtmeter-app'
+        publishLocation: 'Container'
+
+- stage: Deploy
+  displayName: 'Deploy to Azure App Service'
+  dependsOn: Build
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: DeployJob
+    displayName: 'Deploy to Azure App Service'
+    pool:
+      vmImage: 'ubuntu-latest'
+    environment: 'production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          # Download Build Artifacts
+          - task: DownloadBuildArtifacts@0
+            displayName: 'Download Build Artifacts'
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'ojtmeter-app'
+              downloadPath: '$(System.ArtifactsDirectory)'
+          
+          # Deploy to Azure App Service
+          - task: AzureWebApp@1
+            displayName: 'Deploy to Azure App Service'
+            inputs:
+              azureSubscription: $(azureSubscription)
+              appType: 'webApp'
+              appName: $(appServiceName)
+              resourceGroupName: $(resourceGroupName)
+              package: '$(System.ArtifactsDirectory)/ojtmeter-app'
+              appSettings: |
+                -NODE_ENV "$(NODE_ENV)"
+                -PORT "$(PORT)"
+                -COSMOS_DB_ENDPOINT "$(COSMOS_DB_ENDPOINT)"
+                -COSMOS_DB_KEY "$(COSMOS_DB_KEY)"
+                -COSMOS_DB_DATABASE_ID "$(COSMOS_DB_DATABASE_ID)"
+                -JWT_SECRET "$(JWT_SECRET)"
+                -JWT_EXPIRES_IN "$(JWT_EXPIRES_IN)"
+                -CORS_ORIGIN "$(CORS_ORIGIN)"
+                -RATE_LIMIT_WINDOW_MS "$(RATE_LIMIT_WINDOW_MS)"
+                -RATE_LIMIT_MAX_REQUESTS "$(RATE_LIMIT_MAX_REQUESTS)"
+                -AZURE_STORAGE_CONNECTION_STRING "$(AZURE_STORAGE_CONNECTION_STRING)"
+                -AZURE_STORAGE_CONTAINER_NAME "$(AZURE_STORAGE_CONTAINER_NAME)"
+          
+          # Health Check
+          - task: PowerShell@2
+            displayName: 'Health Check'
+            inputs:
+              targetType: 'inline'
+              script: |
+                $appUrl = "https://$(appServiceName).azurewebsites.net/health"
+                Write-Host "Checking application health at: $appUrl"
+                
+                try {
+                  $response = Invoke-WebRequest -Uri $appUrl -Method GET -TimeoutSec 30
+                  if ($response.StatusCode -eq 200) {
+                    Write-Host "✅ Application is healthy!"
+                    Write-Host "Response: $($response.Content)"
+                  } else {
+                    Write-Host "❌ Application health check failed with status: $($response.StatusCode)"
+                    exit 1
+                  }
+                } catch {
+                  Write-Host "❌ Health check failed: $($_.Exception.Message)"
+                  exit 1
+                }
+
+- stage: Test
+  displayName: 'Run Tests'
+  dependsOn: Build
+  jobs:
+  - job: TestJob
+    displayName: 'Run Application Tests'
+    pool:
+      vmImage: 'ubuntu-latest'
+    
+    steps:
+    # Install Node.js
+    - task: NodeTool@0
+      displayName: 'Install Node.js'
+      inputs:
+        versionSpec: $(nodeVersion)
+    
+    # Install dependencies
+    - task: Npm@1
+      displayName: 'Install Dependencies'
+      inputs:
+        command: 'run'
+        arguments: 'install:all'
+    
+    # Run Backend Tests
+    - task: Npm@1
+      displayName: 'Run Backend Tests'
+      inputs:
+        command: 'run'
+        arguments: 'test'
+        workingDir: 'backend'
+      continueOnError: true
+    
+    # Run Frontend Tests
+    - task: Npm@1
+      displayName: 'Run Frontend Tests'
+      inputs:
+        command: 'run'
+        arguments: 'test'
+        workingDir: 'frontend'
+      continueOnError: true
+    
+    # Publish Test Results
+    - task: PublishTestResults@2
+      displayName: 'Publish Test Results'
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '**/test-results.xml'
+        mergeTestResults: true
+      continueOnError: true

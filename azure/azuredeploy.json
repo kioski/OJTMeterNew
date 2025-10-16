@@ -1,0 +1,338 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "appServiceName": {
+      "type": "string",
+      "defaultValue": "ojtmeter-app",
+      "metadata": {
+        "description": "Name of the Azure App Service"
+      }
+    },
+    "resourceGroupName": {
+      "type": "string",
+      "defaultValue": "ojtmeter-rg",
+      "metadata": {
+        "description": "Name of the resource group"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "East US",
+      "metadata": {
+        "description": "Location for all resources"
+      }
+    },
+    "cosmosDbAccountName": {
+      "type": "string",
+      "defaultValue": "ojtmeter-cosmosdb",
+      "metadata": {
+        "description": "Name of the Cosmos DB account"
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "defaultValue": "ojtmeterstorage",
+      "metadata": {
+        "description": "Name of the storage account for exports"
+      }
+    },
+    "appServicePlanName": {
+      "type": "string",
+      "defaultValue": "ojtmeter-plan",
+      "metadata": {
+        "description": "Name of the App Service plan"
+      }
+    },
+    "jwtSecret": {
+      "type": "securestring",
+      "metadata": {
+        "description": "JWT secret for authentication"
+      }
+    }
+  },
+  "variables": {
+    "cosmosDbDatabaseName": "ojtmeter-db",
+    "storageContainerName": "exports"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2021-02-01",
+      "name": "[parameters('appServicePlanName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "F1",
+        "tier": "Free",
+        "size": "F1",
+        "family": "F",
+        "capacity": 0
+      },
+      "properties": {
+        "reserved": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2021-02-01",
+      "name": "[parameters('appServiceName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]"
+      ],
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "NODE_ENV",
+              "value": "production"
+            },
+            {
+              "name": "PORT",
+              "value": "8080"
+            },
+            {
+              "name": "COSMOS_DB_ENDPOINT",
+              "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName'))).documentEndpoint]"
+            },
+            {
+              "name": "COSMOS_DB_KEY",
+              "value": "[listKeys(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName')), '2021-04-15').primaryMasterKey]"
+            },
+            {
+              "name": "COSMOS_DB_DATABASE_ID",
+              "value": "[variables('cosmosDbDatabaseName')]"
+            },
+            {
+              "name": "JWT_SECRET",
+              "value": "[parameters('jwtSecret')]"
+            },
+            {
+              "name": "JWT_EXPIRES_IN",
+              "value": "24h"
+            },
+            {
+              "name": "CORS_ORIGIN",
+              "value": "[concat('https://', parameters('appServiceName'), '.azurewebsites.net')]"
+            },
+            {
+              "name": "RATE_LIMIT_WINDOW_MS",
+              "value": "900000"
+            },
+            {
+              "name": "RATE_LIMIT_MAX_REQUESTS",
+              "value": "100"
+            },
+            {
+              "name": "AZURE_STORAGE_CONNECTION_STRING",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2021-04-01').keys[0].value, ';EndpointSuffix=core.windows.net')]"
+            },
+            {
+              "name": "AZURE_STORAGE_CONTAINER_NAME",
+              "value": "[variables('storageContainerName')]"
+            }
+          ],
+          "linuxFxVersion": "NODE|18-lts",
+          "alwaysOn": false,
+          "httpLoggingEnabled": true,
+          "logsDirectorySizeLimit": 35,
+          "detailedErrorLoggingEnabled": true,
+          "publishingUsername": "[concat('$', parameters('appServiceName'))]",
+          "scmType": "None"
+        },
+        "httpsOnly": true
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "apiVersion": "2021-04-15",
+      "name": "[parameters('cosmosDbAccountName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "consistencyPolicy": {
+          "defaultConsistencyLevel": "Session"
+        },
+        "locations": [
+          {
+            "locationName": "[parameters('location')]",
+            "failoverPriority": 0,
+            "isZoneRedundant": false
+          }
+        ],
+        "databaseAccountOfferType": "Standard",
+        "enableAutomaticFailover": false,
+        "enableMultipleWriteLocations": false,
+        "isVirtualNetworkFilterEnabled": false,
+        "virtualNetworkRules": [],
+        "ipRules": [],
+        "capabilities": [],
+        "enableFreeTier": true
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+      "apiVersion": "2021-04-15",
+      "name": "[concat(parameters('cosmosDbAccountName'), '/', variables('cosmosDbDatabaseName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName'))]"
+      ],
+      "properties": {
+        "resource": {
+          "id": "[variables('cosmosDbDatabaseName')]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2021-04-15",
+      "name": "[concat(parameters('cosmosDbAccountName'), '/', variables('cosmosDbDatabaseName'), '/Users')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('cosmosDbAccountName'), variables('cosmosDbDatabaseName'))]"
+      ],
+      "properties": {
+        "resource": {
+          "id": "Users",
+          "partitionKey": {
+            "paths": ["/id"],
+            "kind": "Hash"
+          },
+          "indexingPolicy": {
+            "automatic": true,
+            "indexingMode": "consistent",
+            "includedPaths": [
+              {
+                "path": "/*"
+              }
+            ],
+            "excludedPaths": [
+              {
+                "path": "/email/?"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2021-04-15",
+      "name": "[concat(parameters('cosmosDbAccountName'), '/', variables('cosmosDbDatabaseName'), '/TimeLogs')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('cosmosDbAccountName'), variables('cosmosDbDatabaseName'))]"
+      ],
+      "properties": {
+        "resource": {
+          "id": "TimeLogs",
+          "partitionKey": {
+            "paths": ["/userId"],
+            "kind": "Hash"
+          },
+          "indexingPolicy": {
+            "automatic": true,
+            "indexingMode": "consistent",
+            "includedPaths": [
+              {
+                "path": "/*"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2021-04-15",
+      "name": "[concat(parameters('cosmosDbAccountName'), '/', variables('cosmosDbDatabaseName'), '/Projects')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('cosmosDbAccountName'), variables('cosmosDbDatabaseName'))]"
+      ],
+      "properties": {
+        "resource": {
+          "id": "Projects",
+          "partitionKey": {
+            "paths": ["/id"],
+            "kind": "Hash"
+          },
+          "indexingPolicy": {
+            "automatic": true,
+            "indexingMode": "consistent",
+            "includedPaths": [
+              {
+                "path": "/*"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2021-04-15",
+      "name": "[concat(parameters('cosmosDbAccountName'), '/', variables('cosmosDbDatabaseName'), '/Roles')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('cosmosDbAccountName'), variables('cosmosDbDatabaseName'))]"
+      ],
+      "properties": {
+        "resource": {
+          "id": "Roles",
+          "partitionKey": {
+            "paths": ["/id"],
+            "kind": "Hash"
+          },
+          "indexingPolicy": {
+            "automatic": true,
+            "indexingMode": "consistent",
+            "includedPaths": [
+              {
+                "path": "/*"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2021-04-01",
+      "name": "[parameters('storageAccountName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "accessTier": "Hot",
+        "allowBlobPublicAccess": false,
+        "minimumTlsVersion": "TLS1_2",
+        "supportsHttpsTrafficOnly": true
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2021-04-01",
+      "name": "[concat(parameters('storageAccountName'), '/default/', variables('storageContainerName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+      ],
+      "properties": {
+        "publicAccess": "None"
+      }
+    }
+  ],
+  "outputs": {
+    "appServiceUrl": {
+      "type": "string",
+      "value": "[concat('https://', reference(resourceId('Microsoft.Web/sites', parameters('appServiceName'))).defaultHostName)]"
+    },
+    "cosmosDbEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName'))).documentEndpoint]"
+    },
+    "storageAccountName": {
+      "type": "string",
+      "value": "[parameters('storageAccountName')]"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "appServiceName": {
+      "value": "ojtmeter-app-prod"
+    },
+    "resourceGroupName": {
+      "value": "ojtmeter-rg"
+    },
+    "location": {
+      "value": "East US"
+    },
+    "cosmosDbAccountName": {
+      "value": "ojtmeter-cosmosdb-prod"
+    },
+    "storageAccountName": {
+      "value": "ojtmeterstorageprod"
+    },
+    "appServicePlanName": {
+      "value": "ojtmeter-plan-prod"
+    },
+    "jwtSecret": {
+      "value": "CHANGE-THIS-TO-A-SECURE-RANDOM-STRING-IN-PRODUCTION"
+    }
+  }
+}
