@@ -3,11 +3,18 @@ import { getCosmosDB } from '../utils/cosmos';
 import { User, UserRole, RegisterRequest } from '../types';
 
 export class UserModel {
-  private container: Container;
+  private container: Container | null = null;
 
   constructor() {
-    const cosmosDB = getCosmosDB();
-    this.container = cosmosDB.getContainer('Users');
+    // Lazy initialization - will be set when first accessed
+  }
+
+  private getContainer(): Container {
+    if (!this.container) {
+      const cosmosDB = getCosmosDB();
+      this.container = cosmosDB.getContainer('Users');
+    }
+    return this.container;
   }
 
   async create(userData: RegisterRequest): Promise<User> {
@@ -24,14 +31,14 @@ export class UserModel {
       projectIds: []
     };
 
-    const { resource } = await this.container.items.create(user);
+    const { resource } = await this.getContainer().items.create(user);
     return resource as User;
   }
 
   async findByEmail(email: string): Promise<User | null> {
     try {
       const query = 'SELECT * FROM c WHERE c.email = @email';
-      const { resources } = await this.container.items
+      const { resources } = await this.getContainer().items
         .query({
           query,
           parameters: [{ name: '@email', value: email.toLowerCase() }]
@@ -48,7 +55,7 @@ export class UserModel {
   async findById(id: string): Promise<User | null> {
     try {
       console.log('Searching for user with ID:', id);
-      const { resource } = await this.container.item(id, id).read();
+      const { resource } = await this.getContainer().item(id, id).read();
       console.log('Found user:', resource);
       return resource as User | null;
     } catch (error) {
@@ -68,7 +75,7 @@ export class UserModel {
         updatedAt: new Date()
       };
 
-      const { resource } = await this.container.item(id, id).replace(updatedUser);
+      const { resource } = await this.getContainer().item(id, id).replace(updatedUser);
       return resource as User;
     } catch (error) {
       console.error('Error updating user:', error);
@@ -78,7 +85,7 @@ export class UserModel {
 
   async delete(id: string): Promise<boolean> {
     try {
-      await this.container.item(id, id).delete();
+      await this.getContainer().item(id, id).delete();
       return true;
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -89,7 +96,7 @@ export class UserModel {
   async findAll(): Promise<User[]> {
     try {
       const query = 'SELECT * FROM c ORDER BY c.createdAt DESC';
-      const { resources } = await this.container.items
+      const { resources } = await this.getContainer().items
         .query({ query })
         .fetchAll();
 
@@ -103,7 +110,7 @@ export class UserModel {
   async getAll(limit: number = 100): Promise<User[]> {
     try {
       const query = 'SELECT * FROM c ORDER BY c.createdAt DESC';
-      const { resources } = await this.container.items
+      const { resources } = await this.getContainer().items
         .query({ query })
         .fetchAll();
 
@@ -117,7 +124,7 @@ export class UserModel {
   async getUsersByRole(role: UserRole): Promise<User[]> {
     try {
       const query = 'SELECT * FROM c WHERE c.role = @role ORDER BY c.createdAt DESC';
-      const { resources } = await this.container.items
+      const { resources } = await this.getContainer().items
         .query({
           query,
           parameters: [{ name: '@role', value: role }]

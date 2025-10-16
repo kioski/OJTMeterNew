@@ -3,11 +3,18 @@ import { getCosmosDB } from '../utils/cosmos';
 import { TimeLog, TimeLogRequest, TimeLogFilters } from '../types';
 
 export class TimeLogModel {
-  private container: Container;
+  private container: Container | null = null;
 
   constructor() {
-    const cosmosDB = getCosmosDB();
-    this.container = cosmosDB.getContainer('TimeLogs');
+    // Lazy initialization - will be set when first accessed
+  }
+
+  private getContainer(): Container {
+    if (!this.container) {
+      const cosmosDB = getCosmosDB();
+      this.container = cosmosDB.getContainer('TimeLogs');
+    }
+    return this.container;
   }
 
   async create(userId: string, timeLogData: TimeLogRequest): Promise<TimeLog> {
@@ -22,13 +29,13 @@ export class TimeLogModel {
       updatedAt: new Date()
     };
 
-    const { resource } = await this.container.items.create(timeLog);
+    const { resource } = await this.getContainer().items.create(timeLog);
     return resource as TimeLog;
   }
 
   async findById(id: string, userId: string): Promise<TimeLog | null> {
     try {
-      const { resource } = await this.container.item(id, userId).read();
+      const { resource } = await this.getContainer().item(id, userId).read();
       return resource as TimeLog | null;
     } catch (error) {
       console.error('Error finding time log by ID:', error);
@@ -39,7 +46,7 @@ export class TimeLogModel {
   async findByUser(userId: string, limit: number = 100): Promise<TimeLog[]> {
     try {
       const query = 'SELECT * FROM c WHERE c.userId = @userId ORDER BY c.date DESC';
-      const { resources } = await this.container.items
+      const { resources } = await this.getContainer().items
         .query({
           query,
           parameters: [{ name: '@userId', value: userId }]
@@ -56,7 +63,7 @@ export class TimeLogModel {
   async findByProject(projectId: string, limit: number = 100): Promise<TimeLog[]> {
     try {
       const query = 'SELECT * FROM c WHERE c.projectId = @projectId ORDER BY c.date DESC';
-      const { resources } = await this.container.items
+      const { resources } = await this.getContainer().items
         .query({
           query,
           parameters: [{ name: '@projectId', value: projectId }]
@@ -97,7 +104,7 @@ export class TimeLogModel {
 
       query += ' ORDER BY c.date DESC';
 
-      const { resources } = await this.container.items
+      const { resources } = await this.getContainer().items
         .query({ query, parameters })
         .fetchAll();
 
@@ -119,7 +126,7 @@ export class TimeLogModel {
         updatedAt: new Date()
       };
 
-      const { resource } = await this.container.item(id, userId).replace(updatedTimeLog);
+      const { resource } = await this.getContainer().item(id, userId).replace(updatedTimeLog);
       return resource as TimeLog;
     } catch (error) {
       console.error('Error updating time log:', error);
@@ -129,7 +136,7 @@ export class TimeLogModel {
 
   async delete(id: string, userId: string): Promise<boolean> {
     try {
-      await this.container.item(id, userId).delete();
+      await this.getContainer().item(id, userId).delete();
       return true;
     } catch (error) {
       console.error('Error deleting time log:', error);
@@ -140,7 +147,7 @@ export class TimeLogModel {
   async getTotalHoursByUser(userId: string): Promise<number> {
     try {
       const query = 'SELECT VALUE SUM(c.hours) FROM c WHERE c.userId = @userId';
-      const { resources } = await this.container.items
+      const { resources } = await this.getContainer().items
         .query({
           query,
           parameters: [{ name: '@userId', value: userId }]
@@ -157,7 +164,7 @@ export class TimeLogModel {
   async getTotalHoursByProject(projectId: string): Promise<number> {
     try {
       const query = 'SELECT VALUE SUM(c.hours) FROM c WHERE c.projectId = @projectId';
-      const { resources } = await this.container.items
+      const { resources } = await this.getContainer().items
         .query({
           query,
           parameters: [{ name: '@projectId', value: projectId }]
@@ -174,7 +181,7 @@ export class TimeLogModel {
   async getHoursByDateRange(userId: string, startDate: Date, endDate: Date): Promise<TimeLog[]> {
     try {
       const query = 'SELECT * FROM c WHERE c.userId = @userId AND c.date >= @startDate AND c.date <= @endDate ORDER BY c.date ASC';
-      const { resources } = await this.container.items
+      const { resources } = await this.getContainer().items
         .query({
           query,
           parameters: [

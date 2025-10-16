@@ -3,11 +3,18 @@ import { getCosmosDB } from '../utils/cosmos';
 import { Project, ProjectRequest } from '../types';
 
 export class ProjectModel {
-  private container: Container;
+  private container: Container | null = null;
 
   constructor() {
-    const cosmosDB = getCosmosDB();
-    this.container = cosmosDB.getContainer('Projects');
+    // Lazy initialization - will be set when first accessed
+  }
+
+  private getContainer(): Container {
+    if (!this.container) {
+      const cosmosDB = getCosmosDB();
+      this.container = cosmosDB.getContainer('Projects');
+    }
+    return this.container;
   }
 
   async create(projectData: ProjectRequest): Promise<Project> {
@@ -21,13 +28,13 @@ export class ProjectModel {
       updatedAt: new Date()
     };
 
-    const { resource } = await this.container.items.create(project);
+    const { resource } = await this.getContainer().items.create(project);
     return resource as Project;
   }
 
   async findById(id: string): Promise<Project | null> {
     try {
-      const { resource } = await this.container.item(id, id).read();
+      const { resource } = await this.getContainer().item(id, id).read();
       return resource as Project | null;
     } catch (error) {
       console.error('Error finding project by ID:', error);
@@ -44,7 +51,7 @@ export class ProjectModel {
   async getAll(limit: number = 100): Promise<Project[]> {
     try {
       const query = 'SELECT * FROM c ORDER BY c.createdAt DESC';
-      const { resources } = await this.container.items
+      const { resources } = await this.getContainer().items
         .query({ query })
         .fetchAll();
 
@@ -58,7 +65,7 @@ export class ProjectModel {
   async getActiveProjects(): Promise<Project[]> {
     try {
       const query = 'SELECT * FROM c WHERE c.isActive = true ORDER BY c.createdAt DESC';
-      const { resources } = await this.container.items
+      const { resources } = await this.getContainer().items
         .query({ query })
         .fetchAll();
 
@@ -72,7 +79,7 @@ export class ProjectModel {
   async findByUser(userId: string): Promise<Project[]> {
     try {
       const query = 'SELECT * FROM c WHERE ARRAY_CONTAINS(c.assignedUserIds, @userId) AND c.isActive = true';
-      const { resources } = await this.container.items
+      const { resources } = await this.getContainer().items
         .query({
           query,
           parameters: [{ name: '@userId', value: userId }]
@@ -97,7 +104,7 @@ export class ProjectModel {
         updatedAt: new Date()
       };
 
-      const { resource } = await this.container.item(id, id).replace(updatedProject);
+      const { resource } = await this.getContainer().item(id, id).replace(updatedProject);
       return resource as Project;
     } catch (error) {
       console.error('Error updating project:', error);
@@ -107,7 +114,7 @@ export class ProjectModel {
 
   async delete(id: string): Promise<boolean> {
     try {
-      await this.container.item(id, id).delete();
+      await this.getContainer().item(id, id).delete();
       return true;
     } catch (error) {
       console.error('Error deleting project:', error);

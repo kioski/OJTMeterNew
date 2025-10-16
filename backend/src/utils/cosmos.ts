@@ -194,30 +194,30 @@ class MockCosmosDBService {
             
             return { resources: results };
           }
-        }),
-        item: (id: string, partitionKey?: string) => ({
-          read: async () => {
-            const item = container.find(item => item.id === id);
-            return { resource: item || null };
-          },
-          replace: async (updatedItem: any) => {
-            const index = container.findIndex(item => item.id === id);
-            if (index !== -1) {
-              container[index] = updatedItem;
-              return { resource: updatedItem };
-            }
-            throw new Error('Item not found');
-          },
-          delete: async () => {
-            const index = container.findIndex(item => item.id === id);
-            if (index !== -1) {
-              container.splice(index, 1);
-              return { resource: { id } };
-            }
-            throw new Error('Item not found');
-          }
         })
-      }
+      },
+      item: (id: string, partitionKey?: string) => ({
+        read: async () => {
+          const item = container.find(item => item.id === id);
+          return { resource: item || null };
+        },
+        replace: async (updatedItem: any) => {
+          const index = container.findIndex(item => item.id === id);
+          if (index !== -1) {
+            container[index] = updatedItem;
+            return { resource: updatedItem };
+          }
+          throw new Error('Item not found');
+        },
+        delete: async () => {
+          const index = container.findIndex(item => item.id === id);
+          if (index !== -1) {
+            container.splice(index, 1);
+            return { resource: { id } };
+          }
+          throw new Error('Item not found');
+        }
+      })
     };
   }
 
