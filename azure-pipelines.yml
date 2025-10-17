@@ -21,6 +21,7 @@ variables:
   azureSubscription: 'Azure-Subscription-Connection'
   appServiceName: 'ojtmeter-app-prod'
   resourceGroupName: 'ojtmeter-rg'
+  location: 'UK South'
   
   # Application Configuration
   frontendBuildPath: 'frontend/dist'
