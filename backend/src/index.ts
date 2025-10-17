@@ -61,11 +61,19 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Serve static files from frontend build
+app.use(express.static('frontend/dist'));
+
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/time-logs', timeLogRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/exports', exportRoutes);
+
+// Catch-all handler: send back React's index.html file for any non-API routes
+app.get('*', (req, res) => {
+  res.sendFile('index.html', { root: 'frontend/dist' });
+});
 
 // 404 handler
 app.use('*', (req, res) => {
