@@ -241,9 +241,12 @@ export const initializeCosmosDB = async (): Promise<CosmosDBService | MockCosmos
       databaseId: process.env.COSMOS_DB_DATABASE_ID || 'ojtmeter-db',
     };
 
-    // Use mock service if Cosmos DB credentials are not provided
-    if (!config.endpoint || !config.key || config.endpoint.includes('your-cosmosdb')) {
-      console.log('🔧 No Cosmos DB credentials found, using mock database for development');
+    // Use mock service if Cosmos DB credentials are not provided or invalid
+    if (!config.endpoint || !config.key || 
+        config.endpoint.includes('your-cosmosdb') || 
+        !config.endpoint.startsWith('https://') ||
+        config.endpoint.length < 20) {
+      console.log('🔧 No valid Cosmos DB credentials found, using mock database for development');
       cosmosService = new MockCosmosDBService();
     } else {
       cosmosService = new CosmosDBService(config);
