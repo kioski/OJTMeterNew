@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { AdminController } from '../controllers/AdminController';
 import { AdminTimeLogController } from '../controllers/AdminTimeLogController';
 import { ProjectController } from '../controllers/ProjectController';
@@ -44,14 +44,14 @@ router.post('/projects/test', (req, res) => {
 });
 
 // Project management routes (temporarily without auth for testing)
-router.get('/projects', (req, res) => getProjectController().getAllProjects(req, res));
-router.get('/projects/:id', (req, res) => getProjectController().getProjectById(req, res));
-router.post('/projects', ProjectController.createValidation, (req, res) => getProjectController().createProject(req, res));
-router.put('/projects/:id', ProjectController.updateValidation, (req, res) => getProjectController().updateProject(req, res));
-router.delete('/projects/:id', (req, res) => getProjectController().deleteProject(req, res));
-router.post('/projects/:projectId/assign/:userId', (req, res) => getProjectController().assignUserToProject(req, res));
-router.delete('/projects/:projectId/remove/:userId', (req, res) => getProjectController().removeUserFromProject(req, res));
-router.get('/users/:userId/projects', (req, res) => getProjectController().getProjectsByUser(req, res));
+router.get('/projects', (req: Request, res: Response) => getProjectController().getAllProjects(req, res));
+router.get('/projects/:id', (req: Request, res: Response) => getProjectController().getProjectById(req, res));
+router.post('/projects', ProjectController.createValidation, (req: Request, res: Response) => getProjectController().createProject(req, res));
+router.put('/projects/:id', ProjectController.updateValidation, (req: Request, res: Response) => getProjectController().updateProject(req, res));
+router.delete('/projects/:id', (req: Request, res: Response) => getProjectController().deleteProject(req, res));
+router.post('/projects/:projectId/assign/:userId', (req: Request, res: Response) => getProjectController().assignUserToProject(req, res));
+router.delete('/projects/:projectId/remove/:userId', (req: Request, res: Response) => getProjectController().removeUserFromProject(req, res));
+router.get('/users/:userId/projects', (req: Request, res: Response) => getProjectController().getProjectsByUser(req, res));
 
 // Debug endpoint to check users without authentication
 router.get('/debug/users', (req, res) => {
@@ -73,15 +73,15 @@ router.use(authenticateToken);
 // router.use(requireAdmin); // Temporarily commented out for testing
 
 // User management routes
-router.get('/users', (req, res) => getAdminController().getAllUsers(req, res));
-router.post('/users', AdminController.createUserValidation, (req, res) => getAdminController().createUser(req, res));
-router.put('/users/:id', (req, res) => getAdminController().updateUser(req, res));
-router.delete('/users/:id', (req, res) => getAdminController().deleteUser(req, res));
-router.patch('/users/:id/toggle-status', (req, res) => getAdminController().toggleUserStatus(req, res));
+router.get('/users', (req: Request, res: Response) => getAdminController().getAllUsers(req, res));
+router.post('/users', AdminController.createUserValidation, (req: Request, res: Response) => getAdminController().createUser(req, res));
+router.put('/users/:id', (req: Request, res: Response) => getAdminController().updateUser(req, res));
+router.delete('/users/:id', (req: Request, res: Response) => getAdminController().deleteUser(req, res));
+router.patch('/users/:id/toggle-status', (req: Request, res: Response) => getAdminController().toggleUserStatus(req, res));
 
 // Time logs management routes (admin only)
-router.get('/time-logs', AdminTimeLogController.queryValidation, (req, res) => getAdminTimeLogController().getAllTimeLogs(req, res));
-router.get('/time-logs/user/:userId', AdminTimeLogController.queryValidation, (req, res) => getAdminTimeLogController().getTimeLogsByUser(req, res));
-router.get('/time-logs/summary', AdminTimeLogController.queryValidation, (req, res) => getAdminTimeLogController().getSummaryStats(req, res));
+router.get('/time-logs', AdminTimeLogController.queryValidation, (req: Request, res: Response) => getAdminTimeLogController().getAllTimeLogs(req, res));
+router.get('/time-logs/user/:userId', AdminTimeLogController.queryValidation, (req: Request, res: Response) => getAdminTimeLogController().getTimeLogsByUser(req, res));
+router.get('/time-logs/summary', AdminTimeLogController.queryValidation, (req: Request, res: Response) => getAdminTimeLogController().getSummaryStats(req, res));
 
 export default router;

@@ -28,7 +28,7 @@ export class AuthService {
       expiresIn: this.JWT_EXPIRES_IN,
       issuer: 'ojtmeter-app',
       audience: 'ojtmeter-users'
-    });
+    } as jwt.SignOptions);
   }
 
   static verifyToken(token: string): any {
