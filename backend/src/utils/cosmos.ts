@@ -215,7 +215,7 @@ class MockCosmosDBService {
             container.splice(index, 1);
             return { resource: { id } };
           }
-          throw new Error('Item not found');
+          return { resource: null };
         }
       })
     };

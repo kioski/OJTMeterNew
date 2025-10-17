@@ -136,8 +136,8 @@ export class TimeLogModel {
 
   async delete(id: string, userId: string): Promise<boolean> {
     try {
-      await this.getContainer().item(id, userId).delete();
-      return true;
+      const result = await this.getContainer().item(id, userId).delete();
+      return result.resource !== null;
     } catch (error) {
       console.error('Error deleting time log:', error);
       return false;
