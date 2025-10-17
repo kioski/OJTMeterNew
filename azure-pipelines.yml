@@ -19,8 +19,9 @@ variables:
   
   # Azure Configuration
   azureSubscription: 'Azure-Subscription-Connection'
-  appServiceName: 'ojtmeter-app-prod'
+  appServiceName: 'ojtmeter'
   resourceGroupName: 'ojtmeter-rg'
+  location: 'UK South'
   
   # Application Configuration
   frontendBuildPath: 'frontend/dist'
@@ -139,10 +140,7 @@ stages:
                 -COSMOS_DB_KEY "$(COSMOS_DB_KEY)"
                 -COSMOS_DB_DATABASE_ID "$(COSMOS_DB_DATABASE_ID)"
                 -JWT_SECRET "$(JWT_SECRET)"
-                -JWT_EXPIRES_IN "$(JWT_EXPIRES_IN)"
                 -CORS_ORIGIN "$(CORS_ORIGIN)"
-                -RATE_LIMIT_WINDOW_MS "$(RATE_LIMIT_WINDOW_MS)"
-                -RATE_LIMIT_MAX_REQUESTS "$(RATE_LIMIT_MAX_REQUESTS)"
                 -AZURE_STORAGE_CONNECTION_STRING "$(AZURE_STORAGE_CONNECTION_STRING)"
                 -AZURE_STORAGE_CONTAINER_NAME "$(AZURE_STORAGE_CONTAINER_NAME)"
           
@@ -152,7 +150,7 @@ stages:
             inputs:
               targetType: 'inline'
               script: |
-                $appUrl = "https://$(appServiceName).azurewebsites.net/health"
+                $appUrl = "https://ojtmeter-bdaje7c3b0a0g8cq.uksouth-01.azurewebsites.net/health"
                 Write-Host "Checking application health at: $appUrl"
                 
                 try {
