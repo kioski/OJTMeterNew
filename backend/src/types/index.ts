@@ -1,3 +1,5 @@
+import { Request } from 'express';
+
 export interface User {
   id: string;
   email: string;
@@ -104,4 +106,12 @@ export interface TimeLogFilters {
   projectId?: string;
   startDate?: string;
   endDate?: string;
+}
+
+export interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    email: string;
+    role: UserRole;
+  };
 }
