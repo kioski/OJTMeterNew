@@ -14,7 +14,7 @@ export class ProjectModel {
       const cosmosDB = getCosmosDB();
       this.container = cosmosDB.getContainer('Projects');
     }
-    return this.container;
+    return this.container!;
   }
 
   async create(projectData: ProjectRequest): Promise<Project> {

@@ -14,7 +14,7 @@ export class TimeLogModel {
       const cosmosDB = getCosmosDB();
       this.container = cosmosDB.getContainer('TimeLogs');
     }
-    return this.container;
+    return this.container!;
   }
 
   async create(userId: string, timeLogData: TimeLogRequest): Promise<TimeLog> {

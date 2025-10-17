@@ -16,8 +16,8 @@ export interface ExportResult {
 }
 
 class AzureBlobStorageService {
-  private blobServiceClient: BlobServiceClient;
-  private containerClient: ContainerClient;
+  private blobServiceClient!: BlobServiceClient;
+  private containerClient!: ContainerClient;
   private containerName: string;
 
   constructor() {

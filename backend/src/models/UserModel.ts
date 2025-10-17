@@ -14,7 +14,7 @@ export class UserModel {
       const cosmosDB = getCosmosDB();
       this.container = cosmosDB.getContainer('Users');
     }
-    return this.container;
+    return this.container!;
   }
 
   async create(userData: RegisterRequest): Promise<User> {
