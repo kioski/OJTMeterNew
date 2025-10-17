@@ -10,7 +10,7 @@ trigger:
     exclude:
       - README.md
       - docs/*
-      - *.md
+      - "*.md"
 
 variables:
   # Build Configuration
@@ -30,9 +30,6 @@ variables:
   # Environment Variables (will be set in Azure App Service)
   NODE_ENV: 'production'
   PORT: '8080'
-  
-  # Variable Group
-  - group: 'ojtmeter-prod-variables'
 
 stages:
 - stage: Build
@@ -156,14 +153,14 @@ stages:
                 try {
                   $response = Invoke-WebRequest -Uri $appUrl -Method GET -TimeoutSec 30
                   if ($response.StatusCode -eq 200) {
-                    Write-Host "Application is healthy!"
+                    Write-Host "✅ Application is healthy!"
                     Write-Host "Response: $($response.Content)"
                   } else {
-                    Write-Host "Application health check failed with status: $($response.StatusCode)"
+                    Write-Host "❌ Application health check failed with status: $($response.StatusCode)"
                     exit 1
                   }
                 } catch {
-                  Write-Host "Health check failed: $($_.Exception.Message)"
+                  Write-Host "❌ Health check failed: $($_.Exception.Message)"
                   exit 1
                 }
 
